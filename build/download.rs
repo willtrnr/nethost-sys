@@ -146,17 +146,22 @@ pub fn download_nethost(target: &str, target_path: &Path) -> Result<(), Box<dyn 
         .new_agent();
 
     let index = client
-        .get("https://api.nuget.org/v3/index.json")
+        .get(
+            env::var("NETHOST_NUGET_INDEX_URL")
+                .unwrap_or("https://api.nuget.org/v3/index.json".to_string()),
+        )
         .call()
-        .expect("Failed to query nuget.org index for nethost package. Are you connected to the internet?")
+        .expect(
+            "Failed to query nuget index for nethost package. Are you connected to the internet?",
+        )
         .body_mut()
         .read_json::<ResourceIndex>()
-        .expect("Failed to parse json response from nuget.org.");
+        .expect("Failed to parse json response from nuget.");
     let registrations_base_url = index
         .resources
         .into_iter()
         .find(|res| res.r#type == "RegistrationsBaseUrl")
-        .expect("Unable to find nuget.org query endpoint.")
+        .expect("Unable to find nuget query endpoint.")
         .url;
 
     let package_info = client
@@ -164,10 +169,10 @@ pub fn download_nethost(target: &str, target_path: &Path) -> Result<(), Box<dyn 
             "{registrations_base_url}runtime.{target}.microsoft.netcore.dotnetapphost/index.json"
         ))
         .call()
-        .expect("Failed to find package on nuget.org.")
+        .expect("Failed to find package on nuget.")
         .body_mut()
         .read_json::<PackageInfoIndex>()
-        .expect("Failed to parse json response from nuget.org.")
+        .expect("Failed to parse json response from nuget.")
         .pages
         .into_iter()
         .max_by_key(|page| Version::from_str(page.upper.as_ref()).unwrap())
@@ -179,7 +184,7 @@ pub fn download_nethost(target: &str, target_path: &Path) -> Result<(), Box<dyn 
         .expect("Failed to retrieve package page.")
         .body_mut()
         .read_json::<PackageInfoCatalogPageResponse>()
-        .expect("Failed to parse json page response from nuget.org.");
+        .expect("Failed to parse json page response from nuget.");
 
     let package_pages = match package_response {
         PackageInfoCatalogPageResponse::Page(page) => vec![page],
