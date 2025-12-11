@@ -11,6 +11,7 @@ use std::{
 use build_target::{Arch, Env, Os};
 use semver::Version;
 use serde::Deserialize;
+use ureq::tls::{RootCerts, TlsConfig};
 use zip::ZipArchive;
 
 #[derive(Debug, Deserialize)]
@@ -135,7 +136,14 @@ pub fn download_nethost_from_nuget() -> Result<PathBuf, Box<dyn std::error::Erro
 }
 
 pub fn download_nethost(target: &str, target_path: &Path) -> Result<(), Box<dyn Error>> {
-    let client = ureq::agent();
+    let client = ureq::Agent::config_builder()
+        .tls_config(
+            TlsConfig::builder()
+                .root_certs(RootCerts::PlatformVerifier)
+                .build(),
+        )
+        .build()
+        .new_agent();
 
     let index = client
         .get("https://api.nuget.org/v3/index.json")
